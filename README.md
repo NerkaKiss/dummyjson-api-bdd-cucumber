@@ -8,6 +8,7 @@ BDD API regression test automation for [DummyJSON](https://dummyjson.com). Built
 ![TestNG](https://img.shields.io/badge/TestNG-Test_Framework-f2c811)
 ![Maven](https://img.shields.io/badge/Maven-Build_Tool-c71a36?logo=apachemaven&logoColor=white)
 [![API regression tests](https://github.com/NerkaKiss/dummyjson-api-bdd-cucumber/actions/workflows/api-tests.yml/badge.svg)](https://github.com/NerkaKiss/dummyjson-api-bdd-cucumber/actions/workflows/api-tests.yml)
+[![Cucumber Report](https://img.shields.io/badge/Cucumber-View_Report-23d96c?logo=cucumber&logoColor=white)](https://nerkakiss.github.io/dummyjson-api-bdd-cucumber/)
 
 > DummyJSON is a public demo API. Cart creation, updates, and deletion are simulated and do not persist server-side changes. The suite validates returned responses and depends on the availability of the external API.
 
@@ -96,7 +97,7 @@ The feature describes the behavior being tested. Endpoints, HTTP request constru
 ```text
 .
 ├── .github/workflows/
-│   └── api-tests.yml                   # Regression CI and report artifacts
+│   └── api-tests.yml                   # Regression CI, artifacts, and Pages deployment
 ├── src/test/java/
 │   ├── api/
 │   │   └── ApiClient.java              # GET, POST, PUT, DELETE, query parameters, bearer token
@@ -316,6 +317,7 @@ The workflow:
 - Caches Maven dependencies.
 - Runs `mvn -B clean test "-Dcucumber.filter.tags=@regression"`.
 - Uploads available reports after execution, including failed test runs.
+- Publishes generated regression reports from `master` to GitHub Pages.
 
 The job has a 10-minute timeout and uses the public demo configuration committed to the repository.
 
@@ -330,9 +332,36 @@ target/surefire-reports/
 
 Open a run in [GitHub Actions](https://github.com/NerkaKiss/dummyjson-api-bdd-cucumber/actions/workflows/api-tests.yml), download the artifact, extract it, and open the HTML report in a browser.
 
+### GitHub Pages Setup
+
+In the repository settings, select:
+
+```text
+Settings → Pages → Build and deployment → Source: GitHub Actions
+```
+
+The deployment job uses the `github-pages` environment with `pages: write` and `id-token: write` permissions. Pages deployments are serialized so concurrent jobs do not deploy at the same time.
+
 ---
 
 ## Cucumber Reporting
+
+### Public Report
+
+**View the latest published regression report:**
+
+https://nerkakiss.github.io/dummyjson-api-bdd-cucumber/
+
+Publishing follows these rules:
+
+- Pushes to `master` and manual runs from `master` publish a generated report.
+- Successful and failed regression runs can both publish their reports.
+- Pull request runs upload diagnostic artifacts without replacing the public report.
+- If no non-empty HTML report is generated, the previous public report is preserved.
+- Cancelled runs do not deploy a report.
+- Failed tests remain failed in GitHub Actions even when report deployment succeeds.
+
+The HTML report is copied to `index.html` in a separate Pages artifact. Surefire reports remain downloadable in `api-test-reports`; they are not included in the public site.
 
 ### Local HTML Report
 
@@ -380,13 +409,12 @@ Automatic retries are not configured, so the original scenario failure remains v
 - The flow checks login, product selection, and cart ownership, but does not prove that cart creation requires bearer-token authorization.
 - Request models provide typed request bodies; response checks still rely on JSONPath field names and types.
 - Parallel execution is not enabled by default. The thread-local context separates stored state, but REST Assured configuration is shared statically.
-- Reports are downloaded as CI artifacts; public GitHub Pages report hosting is not configured.
+- The public report reflects the latest deployed run from `master`; reports for individual runs remain available as CI artifacts.
 
 ---
 
 ## Future Improvements
 
 - Attach request/response evidence for failed JSONPath assertions.
-- Publish the latest regression HTML report through GitHub Pages.
 - Add manual CI selection for smoke and regression suites.
 - Extend focused API edge-case coverage where additional behavior is documented by DummyJSON.

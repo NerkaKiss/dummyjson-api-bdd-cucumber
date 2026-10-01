@@ -14,6 +14,11 @@ jobs:
   regression:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      report-ready: ${{ steps.upload-pages.outcome == 'success' }}
+    permissions:
+      contents: read
+      pages: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,3 +42,46 @@ jobs:
             target/cucumber-report.html
             target/surefire-reports/
           if-no-files-found: warn
+
+      - name: Prepare Cucumber report for GitHub Pages
+        id: prepare-pages
+        if: ${{ always() && !cancelled() && github.ref == 'refs/heads/master' && github.event_name != 'pull_request' }}
+        shell: bash
+        run: |
+          if [ -s target/cucumber-report.html ]; then
+            mkdir -p target/pages
+            cp target/cucumber-report.html target/pages/index.html
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No Cucumber report generated; keeping the existing Pages report."
+          fi
+
+      - name: Configure GitHub Pages
+        if: ${{ always() && !cancelled() && steps.prepare-pages.outputs.ready == 'true' }}
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages report
+        id: upload-pages
+        if: ${{ always() && !cancelled() && steps.prepare-pages.outputs.ready == 'true' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/pages
+
+  deploy-report:
+    needs: regression
+    if: ${{ always() && !cancelled() && needs.regression.outputs.report-ready == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pages: write
+      id-token: write
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Cucumber report
+        id: deployment
+        uses: actions/deploy-pages@v4
