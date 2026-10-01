@@ -1,5 +1,7 @@
+@regression @cart @flow
 Feature: Cart Flow API
 
+  @smoke @positive
   Scenario: Logged-in user creates a cart with an available product
     Given I am logged in
     And an available product is selected

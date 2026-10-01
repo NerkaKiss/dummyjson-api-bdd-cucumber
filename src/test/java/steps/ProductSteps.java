@@ -60,11 +60,6 @@ public class ProductSteps {
         context.response = apiClient.get("/products/search", Map.of("q", query));
     }
 
-    @Then("the product id should be {int}")
-    public void verifyProductId(int id) {
-        assertEquals(context.response.jsonPath().getInt("id"), id);
-    }
-
     @Then("the product response should contain requested product details")
     public void verifyProductDetails() {
         SoftAssert softAssert = new SoftAssert();
